@@ -1,0 +1,13 @@
+---
+application: ${env:APPLICATION_NAME, 'rest-api-items'}
+
+custom:
+  region:                                           ${env:AWS_DEFAULT_REGION, 'us-east-1'}
+
+  dynamoDb:
+    table:
+      item:
+        name:                                       ${file(${self:custom.varFile}):application}_${self:provider.region}_${self:provider.stage}
+        pageSize:                                   10
+        readCapacityUnits:                          1
+        writeCapacityUnits:                         1

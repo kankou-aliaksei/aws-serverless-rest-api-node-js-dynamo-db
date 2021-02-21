@@ -1,0 +1,132 @@
+service: ${file(./vars.yml):application}
+
+frameworkVersion: 2.23.0
+
+plugins:
+  - serverless-iam-roles-per-function
+  - serverless-webpack
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${file(${self:custom.varFile}):custom.region}
+  runtime: nodejs14.x
+  timeout: 30
+  memorySize: 128
+  profile: serverless-admin
+  environment:
+    ITEMS_DYNAMO_DB_TABLE: ${self:custom.vars.dynamoDb.table.item.name}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource: '*'
+
+custom:
+  varFile: ./vars.yml
+  vars: ${file(${self:custom.varFile}):custom}
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules: true
+
+functions:
+  ListItems:
+    handler: src/item/handler/list.list
+    description: List Items
+    events:
+      - http:
+          path: items
+          method: get
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
+  GetItem:
+    handler: src/item/handler/get.get
+    description: Get Item
+    events:
+      - http:
+          path: items/{id}
+          method: get
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
+  CreateItem:
+    handler: src/item/handler/create.create
+    description: Create Item
+    events:
+      - http:
+          path: items
+          method: post
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
+  UpdateItem:
+    handler: src/item/handler/update.update
+    description: Update Item
+    events:
+      - http:
+          path: items/{id}
+          method: put
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
+  RemoveItem:
+    handler: src/item/handler/remove.remove
+    description: Remove Item
+    events:
+      - http:
+          path: items/{id}
+          method: delete
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
+
+resources:
+  Resources:
+    ItemsDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.vars.dynamoDb.table.item.readCapacityUnits}
+          WriteCapacityUnits: ${self:custom.vars.dynamoDb.table.item.writeCapacityUnits}
+        GlobalSecondaryIndexes:
+          - IndexName: status-createdAt-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            ProvisionedThroughput:
+              ReadCapacityUnits: ${self:custom.vars.dynamoDb.table.item.readCapacityUnits}
+              WriteCapacityUnits: ${self:custom.vars.dynamoDb.table.item.writeCapacityUnits}
+            Projection:
+              ProjectionType: ALL
+        TableName: ${self:provider.environment.ITEMS_DYNAMO_DB_TABLE}
