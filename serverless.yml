@@ -21,6 +21,8 @@ provider:
 custom:
   varFile: ./vars.yml
   vars: ${file(${self:custom.varFile}):custom}
+  # Webpack cannot be updated to the latest version until serverless-webpack uses the new Webpack API.
+  #  https://github.com/serverless-heaven/serverless-webpack/issues/651
   webpack:
     webpackConfig: webpack.config.js
     includeModules: true
