@@ -1,7 +1,5 @@
 service: ${file(./vars.yml):application}
 
-frameworkVersion: 2.23.0
-
 plugins:
   - serverless-iam-roles-per-function
   - serverless-webpack
@@ -14,19 +12,17 @@ provider:
   timeout: 30
   memorySize: 128
   profile: serverless-admin
+  lambdaHashingVersion: 20201221
+  apiGateway:
+    shouldStartNameWithService: true
   environment:
     ITEMS_DYNAMO_DB_TABLE: ${self:custom.vars.dynamoDb.table.item.name}
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:*
-      Resource: '*'
 
 custom:
   varFile: ./vars.yml
   vars: ${file(${self:custom.varFile}):custom}
   webpack:
-    webpackConfig: 'webpack.config.js'
+    webpackConfig: webpack.config.js
     includeModules: true
 
 functions:
@@ -102,7 +98,6 @@ resources:
   Resources:
     ItemsDynamoDbTable:
       Type: AWS::DynamoDB::Table
-      DeletionPolicy: Retain
       Properties:
         AttributeDefinitions:
           - AttributeName: id
