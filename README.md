@@ -1,0 +1,1 @@
+# aws-serverless-rest-api-node-js-dynamo-db
